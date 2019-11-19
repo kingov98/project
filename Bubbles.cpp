@@ -3,9 +3,15 @@
 #include <ctime>
 #include <math.h>
 
+
+int radius = 1;
+float tileheight = sqrt(3) * radius;
+float tilewidth = 2 * radius;
+float y_offset = 4.75;
+
 Bubbles::Bubbles() {
 	properties.setXYZ(1, 100, 100);
-	setCenter(1.8, 1.5, 0);
+	setCenter(1.8, 30, 0);
 	setMTL();
 }
 
@@ -56,6 +62,25 @@ void Bubbles::collisionHandling(Bubbles& bub) {
 
 
 void Bubbles::decidePosition(Bubbles& bub) {
+	float x = this->getCenter()[0];
+	float y = this->getCenter()[1];
+
+
+	int tiley = (y - y_offset - radius + (tileheight / 2)) / tileheight;
+
+	if (tiley % 2) {
+		x -= tilewidth / 2;
+	}
+	int tilex = x / (tilewidth);
+
+	float y_dot = tiley * tileheight + y_offset + radius;
+	int x_dot = tilex * tilewidth+radius;
+	std::printf("%d %d\n", tilex,tiley);
+	if (tiley % 2) {
+		x_dot += tilewidth/2;
+	}
+	this->setCenter(x_dot, y_dot, 0);
+
 
 };
 

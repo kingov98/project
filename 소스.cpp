@@ -3,6 +3,8 @@
 #include "Bubbles.h"
 #include "Cylinder.h"
 #include "math.h"
+#include "time.h"
+#include <string>
 // include header files
 
 using namespace std;
@@ -11,7 +13,7 @@ using namespace std;
 #define HEIGHT 720
 
 #define LEFTBOUND 0
-#define RIGHTBOUND 20
+#define RIGHTBOUND 21
 #define DOWNBOUND 0
 #define UPBOUND 32
 
@@ -25,46 +27,32 @@ Light* light;
 double s3 = sqrt(3);
 double line[12];
 int angle = 0;
-int radius = 1;
-float tilewidth = 2 * radius;
-float tileheight = s3 * radius;
-int y_offset = 150;
+double velocity = 0.3;
+int game_over = 0;
+int timer = 0;
+int t = 10;
+
+void stopwatch(int Timer) {
+	int NewTime = (int)time(NULL);
+	static int oldTime = NewTime;
+	if (Timer == 1) { 
+		NewTime = (int)time(NULL);
+		if (NewTime != oldTime) {
+			t -= 1;
+			oldTime = NewTime;
+			if(t==0){
+				timer = 0;
+				game_over = 1;
+			}
+		}
+	}
+	
+}
 
 double getRadian(int num) {
 	return num * (PI / 180);
 }
 
-int getTileCoordinateX(int x,int y) {
-	int tilex = x / tilewidth;
-	int tiley = (y - y_offset - radius) / tileheight;
-
-	// X offset for odd rows
-	if (((y - y_offset-radius) / (int)tileheight) % 2) {
-		tilex += tilewidth / 2;
-	}
-
-	return  tilex;
-}
-int getTileCoordinateY(int x, int y) {
-	int tiley = (y - y_offset - radius) / tileheight;
-
-	return  tiley;
-}
-
-float setTileCoordinateX(int tilex, int tiley){
-	int y = tiley * tileheight + y_offset + radius;
-	int x = tilex * tilewidth;
-
-	if ((y - y_offset) % 2) {
-		x += tilewidth / 2;
-	}
-	return x;
-}
-float setTileCoordinateY(int tilex, int tiley) {
-	int y = tiley * tileheight + y_offset + radius;
-
-	return y;
-}
 
 void init() {
 	light = new Light(200, 200, 200, GL_LIGHT0);
@@ -73,14 +61,14 @@ void init() {
 	light->setSpecular(1.0, 1.0, 1.0, 1.0);
 
 	Bubbles initialBubble;
-	initialBubble.setCenter(10, 2.5, 0);
+	initialBubble.setCenter(10.5 , 30.0 , 0);
 	bubbles.push_back(initialBubble);
 
 	Bubbles nextBubble;
 	temp.push_back(nextBubble);
 
 	for (int i = 0; i < 12; i++) {
-		line[i] = 5.5 + s3 * i;
+		line[i] = 5.75 + s3 * i;
 	}
 
 	/* for (double i = 1; i < 20; i += 2) {
@@ -112,7 +100,7 @@ void idle() {
 
 	if (bubbles.back().getVelocity()[0] != 0 || bubbles.back().getVelocity()[1] != 0) {
 		if (temp.size() == 1) {
-			temp[0].setCenter(10, 2.5, 0);
+			temp[0].setCenter(10.5, 30.0, 0);
 			Bubbles nextBubble;
 			temp.push_back(nextBubble);
 		}
@@ -122,9 +110,10 @@ void idle() {
 			bubbles.back().setVelocity(-bubbles.back().getVelocity()[0], bubbles.back().getVelocity()[1], 0);
 
 		// upbound check
-		if (bubbles.back().getCenter()[1] >= line[11]) {
+		if (bubbles.back().getCenter()[1] <= line[0]) {
 			bubbles.back().setVelocity(0, 0, 0);
-			bubbles.back().setY(line[11]);
+			bubbles.back().decidePosition(bubbles.back());
+			bubbles.back().setY(line[0]);
 			bubbles.push_back(temp[0]);
 			temp.erase(temp.begin());
 		}
@@ -133,6 +122,7 @@ void idle() {
 		for (vector<Bubbles>::size_type i = 0; i < bubbles.size() - 1; i++) {
 			if (bubbles.back().collisionDetection(bubbles[i])) {
 				bubbles.back().collisionHandling(bubbles[i]);
+				bubbles.back().decidePosition(bubbles[i]);
 				bubbles.push_back(temp[0]);
 				temp.erase(temp.begin());
 				break;
@@ -147,8 +137,10 @@ void idle() {
 void keyboard(unsigned char key, int x, int y) {
 	// Spacebar - ball shooting
 	if (key == 32) {
-		if (bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0)
-			bubbles.back().setVelocity(0.3*sin(getRadian(angle)), 0.3*cos(getRadian(angle)), 0);
+		if (bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0) {
+			timer = 1;
+			bubbles.back().setVelocity(velocity * sin(getRadian(angle)), -velocity * cos(getRadian(angle)), 0);
+		}
 	}
 
 	// ESC key
@@ -181,30 +173,33 @@ void renderScene() {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(LEFTBOUND, RIGHTBOUND, DOWNBOUND, UPBOUND, -100.0, 100.0);
+	glOrtho(LEFTBOUND, RIGHTBOUND, UPBOUND, DOWNBOUND, -100.0, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
 	// display characters
 	glPushMatrix();
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1, 30.2);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10, 30.2);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 3.1);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1, 3.1);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10, 3.1);
+	std::string s = std::to_string(t);
+	char const* pchar = s.c_str();
+	draw_characters(GLUT_BITMAP_HELVETICA_18,  pchar, 15, 3.1);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8 , 28.5);
 	glPopMatrix();
 
 	glPushMatrix();
 	glBegin(GL_QUADS);
-	glVertex2f(0,4.2);
-	glVertex2f(20,4.2);
-	glVertex2f(20,4.7);
-	glVertex2f(0,4.7);
+	glVertex3f(0,4.2,0);
+	glVertex3f(21,4.2,0);
+	glVertex3f(21,4.7,0);
+	glVertex3f(0,4.7,0);
 	glEnd();
 
 	glBegin(GL_QUADS);
 	glVertex2f(0, line[11] + 0.9);
-	glVertex2f(20, line[11] + 0.9);
-	glVertex2f(20, line[11] + 1.35);
+	glVertex2f(21, line[11] + 0.9);
+	glVertex2f(21, line[11] + 1.35);
 	glVertex2f(0, line[11] + 1.35);
 	glEnd();
 	glPopMatrix();
@@ -215,10 +210,10 @@ void renderScene() {
 	light->draw();
 
 	glPushMatrix();
-	glTranslatef(10, 2.5, 0);
+	glTranslatef(10.5 , 30, 0);
 	glRotatef(90.0, 1.0, 0.0, 0.0);
 	glPushMatrix();
-	glRotatef(-angle, 0, 1, 0);
+	glRotatef(angle, 0, 1, 0);
 	cyl2.draw();
 	glPopMatrix();
 	glPopMatrix();
@@ -235,6 +230,7 @@ void renderScene() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
+	stopwatch(timer);
 
 	glutSwapBuffers();
 }
