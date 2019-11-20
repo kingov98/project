@@ -61,3 +61,7 @@ void Shape3D::setMTL() {
 	mtl.setSpecular(1.0, 1.0, 1.0, 1);
 	mtl.setShininess(40);
 }
+
+Material Shape3D::getMTL() {
+	return mtl;
+};

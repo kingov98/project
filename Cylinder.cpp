@@ -4,8 +4,8 @@
 Cylinder::Cylinder() {
 	properties[0] = 0.5;
 	properties[1] = 2.4;
-	properties[2] = 21;
-	properties[3] = 21;
+	properties[2] = 20;
+	properties[3] = 20;
 	setMTL();
 }
 

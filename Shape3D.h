@@ -20,6 +20,7 @@ public:
 	void move();
 	virtual void setMTL();
 	virtual void draw() const = 0;
+	Material getMTL();
 
 protected:
 	Vector3 center;
