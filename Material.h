@@ -17,7 +17,6 @@ public:
 	void setSpecular(const float* rgba);
 	void setShininess(float sh);
 	void setShininess(const float* sh);
-
 	const float* getEmission() const;
 	const float* getAmbient() const;
 	const float* getDiffuse() const;

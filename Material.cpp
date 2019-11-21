@@ -79,3 +79,4 @@ const float* Material::getSpecular() const {
 const float* Material::getShininess() const {
 	return shininess;
 }
+

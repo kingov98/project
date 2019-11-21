@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 #include "Light.h"
 #include "Bubbles.h"
 #include "Cylinder.h"
@@ -26,12 +27,13 @@ Cylinder cyl1; Cylinder cyl2;
 Light* light;
 double s3 = sqrt(3);
 double line[12];
-double velocity = 0.1;
+double velocity = 0.5;
 int angle = 0;
 int game_over = 0;
 int timer = 0;
 int t = 100;
 int arr[10][12];
+int samecolorlength = 0;
 
 void stopwatch(int Timer) {
 	int NewTime = (int)time(NULL);
@@ -88,9 +90,9 @@ void init() {
 	} */
 }
 
-void draw_characters(void* font, const char* c, float x, float y) {
+void draw_characters(void* font, const char* c, float x, float y,float z) {
 	glColor3f(1.0, 1.0, 1.0);
-	glRasterPos2f(x, y);
+	glRasterPos3f(x, y, z);
 	for (int i = 0; i < strlen(c); i++)
 		glutBitmapCharacter(font, c[i]);
 }
@@ -114,7 +116,32 @@ void idle() {
 	if (bubbles.back().getCenter()[1] <= line[0]) {
 		bubbles.back().setVelocity(0, 0, 0);
 		bubbles.back().decidePosition();
-		printf("%d %d \n", bubbles.back().getTilex(), bubbles.back().getTiley());
+		bubbles.back().setsamecolor(1);
+		for (int i = 0; i < bubbles.size() - 1; i++) {
+			bubbles.back().search(bubbles[i]);
+		}
+		for (int i = 0; i < bubbles.size() - 1; i++) {
+			if (bubbles[i].getsamecolor() == 1) {
+				for(int j=0; j < bubbles.size() - 1; j++)
+				bubbles[i].search(bubbles[j]);
+			}
+		}
+		for (int i = 0; i < bubbles.size(); i++) {
+			if (bubbles[i].getsamecolor() == 1) {
+				samecolorlength++;
+			}
+		}
+		if (samecolorlength >= 3) {
+			for (int i = 0; i < bubbles.size(); i++) {
+				if (bubbles[i].getsamecolor() == 1) {
+					bubbles[i].setCenter(1,1,0);
+				}
+			}
+		}
+		samecolorlength = 0;
+		for (int i = 0; i < bubbles.size(); i++) {
+			bubbles[i].setsamecolor(0);
+		}
 		bubbles.push_back(temp[0]);
 		temp.erase(temp.begin());
 	}
@@ -124,13 +151,35 @@ void idle() {
 		if (bubbles.back().collisionDetection(bubbles[i])) {
 			bubbles.back().setVelocity(0, 0, 0);
 			bubbles.back().decidePosition();
-			if (bubbles.back().getCenter()[1] + s3 * 1 >= 27.3) {
-				game_over = 1;
+			bubbles.back().setsamecolor(1);
+			for (int i = 0; i < bubbles.size() - 1; i++) {
+				bubbles.back().search(bubbles[i]);//쏜 버블과 색이 같으면서 인접한 버블의 samecolor=1
 			}
-
-			printf("%d %d %d \n", bubbles.back().getTilex(), bubbles.back().getTiley(), bubbles.back().getC());
+			for (int i = 0; i < bubbles.size() - 1; i++) {
+				if (bubbles[i].getsamecolor() == 1) {
+					for (int j = 0; j < bubbles.size() - 1; j++)
+						bubbles[i].search(bubbles[j]);//위에서 1로 만든 애들을 상대로 다시 search 
+				}
+			}
+			for (int i = 0; i < bubbles.size(); i++) {
+				if (bubbles[i].getsamecolor() == 1) {
+					samecolorlength++;//samecolor=1인 애들의 갯수를 세고
+				}
+			}
+			if (samecolorlength >= 3) {
+				for (int i = 0; i < bubbles.size(); i++) {
+					if (bubbles[i].getsamecolor() == 1) {
+						bubbles[i].setCenter(1, 1, 0);//3보다 크면 samecolor=1인애들의 중심을 이동
+					}
+				}
+			}
+			samecolorlength = 0;
+			for (int i = 0; i < bubbles.size(); i++) {
+				bubbles[i].setsamecolor(0);//3보다 작으면 전부 원래대로 samecolor=0으로 만듬
+			}
 			bubbles.push_back(temp[0]);
 			temp.erase(temp.begin());
+
 			break;
 		}
 	}
@@ -200,24 +249,25 @@ void renderScene() {
 
 	// display characters
 	glPushMatrix();
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1, 1.8);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10, 1.8);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1, 1.8,0);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10, 1.8,0);
 	std::string s = std::to_string(t);
 	char const* pchar = s.c_str();
-	draw_characters(GLUT_BITMAP_HELVETICA_18, pchar, 15, 1.8);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 28.9);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, pchar, 15, 1.8,0);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 28.9,0);
 	if (game_over == 1) {
-		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 16);
+		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 16, 500);
+		timer = 0;
 	}
 	glPopMatrix();
 
 	// boundary lines
 	glPushMatrix();
 	glBegin(GL_QUADS);
-	glVertex2f(0, line[0] - 0.9);
-	glVertex2f(20, line[0] - 0.9);
-	glVertex2f(20, line[0] - 1.35);
-	glVertex2f(0, line[0] - 1.35);
+	glVertex2f(0, line[0] - 1);
+	glVertex2f(20, line[0] - 1);
+	glVertex2f(20, line[0] - 1.45);
+	glVertex2f(0, line[0] - 1.45);
 	glEnd();
 
 	glBegin(GL_QUADS);
@@ -260,6 +310,8 @@ void renderScene() {
 }
 
 int main(int argc, char** argv) {
+
+	srand((unsigned int)time(NULL));
 	// init GLUT and create Window
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);

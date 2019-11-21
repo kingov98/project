@@ -14,7 +14,7 @@ int yellow[4] = { 1.0, 1.0, 0.0, 1 };
 int green[4] = { 0.0, 1.0, 0.0, 1 };
 int blue[4] = { 0.0, 0.0, 1.0, 1 };
 
-std::vector<int> colorarr;
+
 
 Bubbles::Bubbles() {
 	properties.setXYZ(1, 100, 100);
@@ -24,28 +24,28 @@ Bubbles::Bubbles() {
 
 Bubbles::Bubbles(const Bubbles& bub) : Shape3D(bub) {
 	properties = bub.properties;
+	Color = bub.Color;
+	samecolor = bub.samecolor;
 }
 
-void Bubbles::setMTL() {	
-	srand((unsigned int)time(NULL));
-	const int color = rand() % 4+1;
+void Bubbles::setMTL() {
+	const int color = rand() % 4;
 
 	switch (color) {
-	case 1:
+	case 0:
 		mtl.setAmbient(red[0], red[1], red[2], red[3]);
 		break;
-	case 2:
+	case 1:
 		mtl.setAmbient(yellow[0], yellow[1], yellow[2], yellow[3]);
 		break;
-	case 3:
+	case 2:
 		mtl.setAmbient(green[0], green[1], green[2], green[3]);
 		break;
-	case 4:
+	case 3:
 		mtl.setAmbient(blue[0], blue[1], blue[2], blue[3]);
 		break;
 	}
-	colorarr.push_back(color);
-
+	setColor();
 }
 
 Vector3 Bubbles::getProperties() const {
@@ -73,8 +73,22 @@ int Bubbles::getTilex(){
 int Bubbles::getTiley() {
 	return this ->tiley;
 }
-int Bubbles::getC() {
-	return this ->c;
+void Bubbles::setColor() {
+	if (this->getMTL().getAmbient()[0] == red[0] && this->getMTL().getAmbient()[1] == red[1] && this->getMTL().getAmbient()[2] == red[2]) {
+		this->Color = 1;
+	}else if(this->getMTL().getAmbient()[0] == yellow[0] && this->getMTL().getAmbient()[1] == yellow[1] && this->getMTL().getAmbient()[2] == yellow[2]) {
+		this->Color = 2;
+	}else if(this->getMTL().getAmbient()[0] == green[0] && this->getMTL().getAmbient()[1] == green[1] && this->getMTL().getAmbient()[2] == green[2]) {
+		this->Color = 3;
+	}else if (this->getMTL().getAmbient()[0] == blue[0] && this->getMTL().getAmbient()[1] == blue[1] && this->getMTL().getAmbient()[2] == blue[2]) {
+		this->Color = 4;
+	}
+	else {
+		printf("Error");
+	}
+};
+int Bubbles::getColor() {
+	return this->Color;
 }
 
 void Bubbles::decidePosition() {
@@ -83,13 +97,14 @@ void Bubbles::decidePosition() {
 
 	this-> tiley = (y - y_offset + tileheight / 2) / tileheight;
 
-	if (tiley % 2 != 0)
+	if (tiley % 2 != 0) {
 		x -= tilewidth / 2;
+	}
 
 	this-> tilex = x / tilewidth;
 
 	float y_dot = tiley * tileheight + y_offset;
-	int x_dot = tilex * tilewidth + radius;
+	float x_dot = tilex * tilewidth + radius;
 
 	if (tiley % 2 != 0) {
 		x_dot += tilewidth / 2;
@@ -99,6 +114,22 @@ void Bubbles::decidePosition() {
 
 	this->setCenter(x_dot, y_dot, 0);
 }
+
+int Bubbles::getsamecolor() {
+	return this->samecolor;
+};
+void Bubbles::setsamecolor(int a) {
+	this-> samecolor=a;
+};
+
+void Bubbles::search(Bubbles& bub) {
+	if (collisionDetection(bub)) {
+		if (this->getColor() == bub.getColor()) {
+			bub.setsamecolor(1);
+		}
+	}
+	
+};
 
 void Bubbles::draw() const {
 	glPushMatrix();
