@@ -12,14 +12,17 @@ public:
 	int getTiley();
 	int getColor();
 	int getsamecolor();
+	int getcheck();
 	bool collisionDetection(const Bubbles& bub);
 	void setColor();
 	void setsamecolor(int a);
+	void setcheck(int a);
 	void collisionHandling(Bubbles& bub);
 	void decidePosition();
 	void setMTL();
 	void draw() const;
 	void search(Bubbles& bub);
+	void checksearch(Bubbles& bub);
 
 private:
 	Vector3 properties;
@@ -27,5 +30,6 @@ private:
 	int tiley;
 	int Color;
 	int samecolor;
+	int check;
 };
 

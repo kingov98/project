@@ -26,6 +26,7 @@ Bubbles::Bubbles(const Bubbles& bub) : Shape3D(bub) {
 	properties = bub.properties;
 	Color = bub.Color;
 	samecolor = bub.samecolor;
+	check = bub.check;
 }
 
 void Bubbles::setMTL() {
@@ -129,6 +130,18 @@ void Bubbles::search(Bubbles& bub) {
 		}
 	}
 	
+};
+int Bubbles::getcheck() {
+	return this->check;
+};
+void Bubbles::setcheck(int a) {
+	this->check = a;
+};
+
+void Bubbles::checksearch(Bubbles& bub) {
+	if (collisionDetection(bub)&&bub.getCenter()!=this->getCenter()&& bub.getsamecolor() == 0) {
+			bub.setcheck(1);
+	}
 };
 
 void Bubbles::draw() const {

@@ -27,13 +27,13 @@ Cylinder cyl1; Cylinder cyl2;
 Light* light;
 double s3 = sqrt(3);
 double line[12];
-double velocity = 0.5;
+double velocity = 0.1;
 int angle = 0;
 int game_over = 0;
 int timer = 0;
 int t = 100;
-int arr[10][12];
 int samecolorlength = 0;
+int setchecklength = 0;
 
 void stopwatch(int Timer) {
 	int NewTime = (int)time(NULL);
@@ -117,6 +117,7 @@ void idle() {
 		bubbles.back().setVelocity(0, 0, 0);
 		bubbles.back().decidePosition();
 		bubbles.back().setsamecolor(1);
+		bubbles.back().setcheck(0);
 		for (int i = 0; i < bubbles.size() - 1; i++) {
 			bubbles.back().search(bubbles[i]);
 		}
@@ -132,8 +133,25 @@ void idle() {
 			}
 		}
 		if (samecolorlength >= 3) {
+			/*for (int j = 0; j < 12; j++) {
+				for (int i = 0; i < bubbles.size(); i++) {
+					if (j == 0 && bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
+						bubbles[i].setcheck(1);
+						for (int k = 0; k < bubbles.size(); k++) {
+							bubbles[i].checksearch(bubbles[k]);
+						}
+					}
+					else if (bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
+						for (int k = 0; k < bubbles.size(); k++) {
+							bubbles[i].checksearch(bubbles[k]);
+						}
+					}
+
+				}
+			}*/
 			for (int i = 0; i < bubbles.size(); i++) {
-				if (bubbles[i].getsamecolor() == 1) {
+				printf("%d %d\n", bubbles[i].getsamecolor(), bubbles[i].getcheck());
+				if (/*bubbles[i].getcheck() == 0 ||*/ bubbles[i].getsamecolor()==1) {
 					bubbles[i].setCenter(1,1,0);
 				}
 			}
@@ -141,6 +159,7 @@ void idle() {
 		samecolorlength = 0;
 		for (int i = 0; i < bubbles.size(); i++) {
 			bubbles[i].setsamecolor(0);
+			bubbles[i].setcheck(0);
 		}
 		bubbles.push_back(temp[0]);
 		temp.erase(temp.begin());
@@ -152,6 +171,7 @@ void idle() {
 			bubbles.back().setVelocity(0, 0, 0);
 			bubbles.back().decidePosition();
 			bubbles.back().setsamecolor(1);
+			bubbles.back().setcheck(0);
 			for (int i = 0; i < bubbles.size() - 1; i++) {
 				bubbles.back().search(bubbles[i]);//쏜 버블과 색이 같으면서 인접한 버블의 samecolor=1
 			}
@@ -167,15 +187,34 @@ void idle() {
 				}
 			}
 			if (samecolorlength >= 3) {
+				/*for (int j = 0; j < 12; j++) {
+					for (int i = 0; i < bubbles.size(); i++) {
+						if (j == 0 && bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
+								bubbles[i].setcheck(1);
+								for (int k = 0; k < bubbles.size(); k++) {
+									bubbles[i].checksearch(bubbles[k]);
+								}
+						}
+						else if (bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
+							for (int k = 0; k < bubbles.size(); k++) {
+								bubbles[i].checksearch(bubbles[k]);
+							}
+						}
+							
+					}
+				}
+				*/
 				for (int i = 0; i < bubbles.size(); i++) {
-					if (bubbles[i].getsamecolor() == 1) {
-						bubbles[i].setCenter(1, 1, 0);//3보다 크면 samecolor=1인애들의 중심을 이동
+					printf("%d %d\n", bubbles[i].getsamecolor(), bubbles[i].getcheck());
+					if (/*bubbles[i].getcheck() == 0 ||*/ bubbles[i].getsamecolor() == 1) {
+						bubbles[i].setCenter(1, 1, 0);
 					}
 				}
 			}
 			samecolorlength = 0;
 			for (int i = 0; i < bubbles.size(); i++) {
 				bubbles[i].setsamecolor(0);//3보다 작으면 전부 원래대로 samecolor=0으로 만듬
+				bubbles[i].setcheck(0);
 			}
 			bubbles.push_back(temp[0]);
 			temp.erase(temp.begin());
@@ -193,6 +232,7 @@ void reset() {
 	game_over = 0;
 	timer = 0;
 	t = 100;
+	int samecolorlength = 0;
 
 	bubbles.clear();
 	temp.clear();
@@ -256,7 +296,7 @@ void renderScene() {
 	draw_characters(GLUT_BITMAP_HELVETICA_18, pchar, 15, 1.8,0);
 	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 28.9,0);
 	if (game_over == 1) {
-		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 16, 500);
+		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 16, 0);
 		timer = 0;
 	}
 	glPopMatrix();
