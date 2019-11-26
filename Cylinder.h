@@ -5,10 +5,10 @@ class Cylinder : public Shape3D
 {
 public:
 	Cylinder();
-	void setHeight(float x);
+	void setProperties(float a0, float a1, float a2, float a3, float a4);
 	void draw() const;
 
 private:
-	float properties[4];
+	float properties[5];
 };
 

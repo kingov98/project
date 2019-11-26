@@ -1,6 +1,7 @@
 #pragma once
 #include "Shape3D.h"
-#include <vector>
+#include <ctime>
+#include <math.h>
 
 class Bubbles : public Shape3D
 {
@@ -8,28 +9,29 @@ public:
 	Bubbles();
 	Bubbles(const Bubbles& bub);
 	Vector3 getProperties() const;
-	int getTilex();
-	int getTiley();
-	int getColor();
-	int getsamecolor();
-	int getcheck();
 	bool collisionDetection(const Bubbles& bub);
-	void setColor();
-	void setsamecolor(int a);
-	void setcheck(int a);
+	bool newCollisionDetection(const Bubbles& bub);
 	void collisionHandling(Bubbles& bub);
 	void decidePosition();
+	int getTilex();
+	int getTiley();
+	void setColor();
+	int getColor();
+	void setSamecolor(int same);
+	int getSamecolor();
+	void setCheck(int star);
+	int getCheck();
 	void setMTL();
+	void setMTLforprediction();
 	void draw() const;
-	void search(Bubbles& bub);
-	void checksearch(Bubbles& bub);
-
 private:
 	Vector3 properties;
 	int tilex;
 	int tiley;
-	int Color;
+	int color;
 	int samecolor;
 	int check;
 };
+
+
 

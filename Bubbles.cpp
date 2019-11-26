@@ -1,8 +1,4 @@
 #include "Bubbles.h"
-#include <vector>
-#include <iostream>
-#include <ctime>
-#include <math.h>
 
 int radius = 1;
 float tileheight = sqrt(3) * radius;
@@ -15,16 +11,15 @@ int green[4] = { 0.0, 1.0, 0.0, 1 };
 int blue[4] = { 0.0, 0.0, 1.0, 1 };
 
 
-
-Bubbles::Bubbles() {
-	properties.setXYZ(1, 100, 100);
+Bubbles::Bubbles() : samecolor(0), check(0) {
+	properties.setXYZ(1, 110, 110);
 	setCenter(1.8, 30.5, 0);
 	setMTL();
 }
 
 Bubbles::Bubbles(const Bubbles& bub) : Shape3D(bub) {
 	properties = bub.properties;
-	Color = bub.Color;
+	color = bub.color;
 	samecolor = bub.samecolor;
 	check = bub.check;
 }
@@ -49,11 +44,13 @@ void Bubbles::setMTL() {
 	setColor();
 }
 
+void Bubbles::setMTLforprediction() {
+	mtl.setAmbient(1, 1, 1, 1);
+}
+
 Vector3 Bubbles::getProperties() const {
 	return properties;
 }
-
-
 
 bool Bubbles::collisionDetection(const Bubbles& bub) {
 	// collision detection
@@ -63,45 +60,51 @@ bool Bubbles::collisionDetection(const Bubbles& bub) {
 	else
 		return false;
 }
-
+bool Bubbles::newCollisionDetection(const Bubbles& bub) {
+	// collision detection for searching
+	Vector3 c3 = this->getCenter() - bub.getCenter();
+	if (sqrt(dotProduct(c3, c3)) <= this->getProperties()[0] + bub.getProperties()[0] + 0.05)
+		return true;
+	else
+		return false;
+}
 void Bubbles::collisionHandling(Bubbles& bub) {
 	this->setVelocity(0, 0, 0);
 }
-
-int Bubbles::getTilex(){
+void Bubbles::setColor() {
+	if (this->getMTL().getAmbient()[0] == red[0] && this->getMTL().getAmbient()[1] == red[1] && this->getMTL().getAmbient()[2] == red[2]) {
+		this->color = 1;
+	}
+	else if(this->getMTL().getAmbient()[0] == yellow[0] && this->getMTL().getAmbient()[1] == yellow[1] && this->getMTL().getAmbient()[2] == yellow[2]) {
+		this->color = 2;
+	}
+	else if(this->getMTL().getAmbient()[0] == green[0] && this->getMTL().getAmbient()[1] == green[1] && this->getMTL().getAmbient()[2] == green[2]) {
+		this->color = 3;
+	}
+	else if (this->getMTL().getAmbient()[0] == blue[0] && this->getMTL().getAmbient()[1] == blue[1] && this->getMTL().getAmbient()[2] == blue[2]) {
+		this->color = 4;
+	}
+	/*else {
+		printf("Error");
+	}*/
+};
+int Bubbles::getColor() {
+	return this->color;
+}
+int Bubbles::getTilex() {
 	return this->tilex;
 }
 int Bubbles::getTiley() {
-	return this ->tiley;
+	return this->tiley;
 }
-void Bubbles::setColor() {
-	if (this->getMTL().getAmbient()[0] == red[0] && this->getMTL().getAmbient()[1] == red[1] && this->getMTL().getAmbient()[2] == red[2]) {
-		this->Color = 1;
-	}else if(this->getMTL().getAmbient()[0] == yellow[0] && this->getMTL().getAmbient()[1] == yellow[1] && this->getMTL().getAmbient()[2] == yellow[2]) {
-		this->Color = 2;
-	}else if(this->getMTL().getAmbient()[0] == green[0] && this->getMTL().getAmbient()[1] == green[1] && this->getMTL().getAmbient()[2] == green[2]) {
-		this->Color = 3;
-	}else if (this->getMTL().getAmbient()[0] == blue[0] && this->getMTL().getAmbient()[1] == blue[1] && this->getMTL().getAmbient()[2] == blue[2]) {
-		this->Color = 4;
-	}
-	else {
-		printf("Error");
-	}
-};
-int Bubbles::getColor() {
-	return this->Color;
-}
-
 void Bubbles::decidePosition() {
 	float x = this->getCenter()[0];
 	float y = this->getCenter()[1];
 
 	this-> tiley = (y - y_offset + tileheight / 2) / tileheight;
-
 	if (tiley % 2 != 0) {
 		x -= tilewidth / 2;
 	}
-
 	this-> tilex = x / tilewidth;
 
 	float y_dot = tiley * tileheight + y_offset;
@@ -112,38 +115,20 @@ void Bubbles::decidePosition() {
 		if (tilex == 9)
 			x_dot -= tilewidth;
 	}
-
 	this->setCenter(x_dot, y_dot, 0);
 }
-
-int Bubbles::getsamecolor() {
+void Bubbles::setSamecolor(int same) {
+	this->samecolor = same;
+}
+int Bubbles::getSamecolor() {
 	return this->samecolor;
-};
-void Bubbles::setsamecolor(int a) {
-	this-> samecolor=a;
-};
-
-void Bubbles::search(Bubbles& bub) {
-	if (collisionDetection(bub)) {
-		if (this->getColor() == bub.getColor()) {
-			bub.setsamecolor(1);
-		}
-	}
-	
-};
-int Bubbles::getcheck() {
+}
+void Bubbles::setCheck(int star) {
+	this->check = star;
+}
+int Bubbles::getCheck() {
 	return this->check;
-};
-void Bubbles::setcheck(int a) {
-	this->check = a;
-};
-
-void Bubbles::checksearch(Bubbles& bub) {
-	if (collisionDetection(bub)&&bub.getCenter()!=this->getCenter()&& bub.getsamecolor() == 0) {
-			bub.setcheck(1);
-	}
-};
-
+}
 void Bubbles::draw() const {
 	glPushMatrix();
 
@@ -158,3 +143,8 @@ void Bubbles::draw() const {
 	glutSolidSphere(properties[0], properties[1], properties[2]);
 	glPopMatrix();
 }
+
+
+
+
+

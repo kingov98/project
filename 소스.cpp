@@ -1,10 +1,10 @@
 #include <vector>
 #include <iostream>
-#include "Light.h"
 #include "Bubbles.h"
+#include "Light.h"
 #include "Cylinder.h"
-#include "time.h"
-#include "string"
+#include <time.h>
+#include <string>
 #include <array>
 // include header files
 
@@ -23,37 +23,54 @@ using namespace std;
 // global variables
 vector<Bubbles> bubbles;
 vector<Bubbles> temp;
+vector<Bubbles> Prediction;
 Cylinder cyl1; Cylinder cyl2;
 Light* light;
-double s3 = sqrt(3);
-double line[12];
-double velocity = 0.1;
+float s3 = sqrt(3);
+float line[12];
+float velocity = 0.1;
 int angle = 0;
+int score = 0;
 int game_over = 0;
-int timer = 0;
-int t = 100;
+bool timer = true;
+float timecount = 0;
+int seccount = 0;
+clock_t fps_start = clock();
+clock_t fps_end;
+int fps = 60;
 int samecolorlength = 0;
-int setchecklength = 0;
+int drop = 0;
+int drop_length = 0;
+float drop_velocity = velocity;
+int do_prediction = 0;
+int prediction_sw = 0;
 
-void stopwatch(int Timer) {
-	int NewTime = (int)time(NULL);
-	static int oldTime = NewTime;
+void createPopupMenus();
+void processMainMenu(int value);
+
+/* void stopwatch(int Timer) {
+	int newtime = (unsigned int)time(NULL);
+	static int oldtime = newtime;
 	if (Timer == 1) {
-		NewTime = (int)time(NULL);
-		if (NewTime != oldTime) {
+		newtime = (unsigned int)time(NULL);
+		if (newtime != oldtime) {
 			t -= 1;
-			oldTime = NewTime;
+			oldtime = newtime;
 			if (t == 0) {
 				timer = 0;
-				game_over = 1;
 			}
 		}
 	}
-
-}
+}*/
 
 double getRadian(int num) {
 	return num * (PI / 180);
+}
+
+void draw_characters(void* font, const char* c, float x, float y, float z) {
+	glRasterPos3f(x, y, z);
+	for (int i = 0; i < strlen(c); i++)
+		glutBitmapCharacter(font, c[i]);
 }
 
 void init() {
@@ -69,170 +86,234 @@ void init() {
 	Bubbles nextBubble;
 	temp.push_back(nextBubble);
 
+
 	for (int i = 0; i < 12; i++) {
 		line[i] = 7.5 + s3 * i;
 	}
-
-	/* for (double i = 1; i < 20; i += 2) {
-		for (double j = 7.5; j < 28; j += 2 * s3) {
-			Bubbles bubble1(initialBubble);
-			bubble1.setCenter(i, j, 0);
-			bubbles.push_back(bubble1);
-		}
-	}
-
-	for (double i = 2; i < 20; i += 2) {
-		for (double j = 7.5 + s3; j < 28; j += 2 * s3) {
-			Bubbles bubble2(initialBubble);
-			bubble2.setCenter(i, j, 0);
-			bubbles.push_back(bubble2);
-		}
-	} */
 }
 
-void draw_characters(void* font, const char* c, float x, float y,float z) {
-	glColor3f(1.0, 1.0, 1.0);
-	glRasterPos3f(x, y, z);
-	for (int i = 0; i < strlen(c); i++)
-		glutBitmapCharacter(font, c[i]);
+// 인접하고, 색깔이 같고, samecolor=0인 버블의 samecolor를 1로 설정하는 함수
+void search(Bubbles& bub) {
+	for (int i = 0; i < bubbles.size() - 1; i++) {
+		if (bub.newCollisionDetection(bubbles[i]) && bub.getColor() == bubbles[i].getColor() && bubbles[i].getSamecolor() == 0) {
+			bubbles[i].setSamecolor(1);
+			search(bubbles[i]);
+		}
+	}
+}
+
+// 자신에게 체크한 뒤, 체크가 없는 인접한 버블로 가서 재탐색하는 함수
+void checkSearch(Bubbles& bub) {
+	if (bub.getCheck() == 0)
+		bub.setCheck(1);
+	for (int i = 0; i < bubbles.size(); i++) {
+		if (bub.newCollisionDetection(bubbles[i]) && bubbles[i].getCheck() == 0)
+			checkSearch(bubbles[i]);
+	}
 }
 
 void idle() {
-	// time counting
-
-	if (bubbles.back().getVelocity()[0] != 0 || bubbles.back().getVelocity()[1] != 0) {
-		if (temp.size() == 1) {
-			temp[0].setCenter(10.0, 29.0, 0.0);
-			Bubbles nextBubble;
-			temp.push_back(nextBubble);
+	// fps 설정
+	fps_end = clock();
+	if (fps_end - fps_start > 1000 / fps) {
+		// time counting - 6초마다 타이머 리셋. seccount가 fps에 따라 1초에 30씩 증가하므로 seccount=180이면 6초임
+		if (timer)
+			seccount += 1;
+		if (seccount == 600) {
+			bubbles.back().setVelocity(velocity * sin(getRadian(angle)), velocity * -cos(getRadian(angle)), 0);
+			timecount = 0;
+			seccount = 0;
+			prediction_sw = 0;
 		}
-	}
-
-	// boundary check
-	if (bubbles.back().getCenter()[0] + 1 >= RIGHTBOUND || bubbles.back().getCenter()[0] - 1 <= LEFTBOUND)
-		bubbles.back().setVelocity(-bubbles.back().getVelocity()[0], bubbles.back().getVelocity()[1], 0);
-
-	// upbound check
-	if (bubbles.back().getCenter()[1] <= line[0]) {
-		bubbles.back().setVelocity(0, 0, 0);
-		bubbles.back().decidePosition();
-		bubbles.back().setsamecolor(1);
-		bubbles.back().setcheck(0);
-		for (int i = 0; i < bubbles.size() - 1; i++) {
-			bubbles.back().search(bubbles[i]);
-		}
-		for (int i = 0; i < bubbles.size() - 1; i++) {
-			if (bubbles[i].getsamecolor() == 1) {
-				for(int j=0; j < bubbles.size() - 1; j++)
-				bubbles[i].search(bubbles[j]);
-			}
-		}
-		for (int i = 0; i < bubbles.size(); i++) {
-			if (bubbles[i].getsamecolor() == 1) {
-				samecolorlength++;
-			}
-		}
-		if (samecolorlength >= 3) {
-			/*for (int j = 0; j < 12; j++) {
-				for (int i = 0; i < bubbles.size(); i++) {
-					if (j == 0 && bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
-						bubbles[i].setcheck(1);
-						for (int k = 0; k < bubbles.size(); k++) {
-							bubbles[i].checksearch(bubbles[k]);
-						}
-					}
-					else if (bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
-						for (int k = 0; k < bubbles.size(); k++) {
-							bubbles[i].checksearch(bubbles[k]);
-						}
-					}
-
-				}
-			}*/
-			for (int i = 0; i < bubbles.size(); i++) {
-				printf("%d %d\n", bubbles[i].getsamecolor(), bubbles[i].getcheck());
-				if (/*bubbles[i].getcheck() == 0 ||*/ bubbles[i].getsamecolor()==1) {
-					bubbles[i].setCenter(1,1,0);
+		if (timer)
+			timecount += 6.5 / 600;
+		if (drop == 0) {
+			if (bubbles.back().getVelocity()[0] != 0 || bubbles.back().getVelocity()[1] != 0) {
+				if (temp.size() == 1) {
+					temp[0].setCenter(10.0, 29.0, 0.0);
+					Bubbles nextBubble;
+					temp.push_back(nextBubble);
 				}
 			}
-		}
-		samecolorlength = 0;
-		for (int i = 0; i < bubbles.size(); i++) {
-			bubbles[i].setsamecolor(0);
-			bubbles[i].setcheck(0);
-		}
-		bubbles.push_back(temp[0]);
-		temp.erase(temp.begin());
-	}
 
-	// collision handling
-	for (vector<Bubbles>::size_type i = 0; i < bubbles.size() - 1; ++i) {
-		if (bubbles.back().collisionDetection(bubbles[i])) {
-			bubbles.back().setVelocity(0, 0, 0);
-			bubbles.back().decidePosition();
-			bubbles.back().setsamecolor(1);
-			bubbles.back().setcheck(0);
-			for (int i = 0; i < bubbles.size() - 1; i++) {
-				bubbles.back().search(bubbles[i]);//쏜 버블과 색이 같으면서 인접한 버블의 samecolor=1
+			// boundary check
+			if (bubbles.back().getCenter()[0] + 1 >= RIGHTBOUND || bubbles.back().getCenter()[0] - 1 <= LEFTBOUND) {
+				bubbles.back().setVelocity(-bubbles.back().getVelocity()[0], bubbles.back().getVelocity()[1], 0);
 			}
-			for (int i = 0; i < bubbles.size() - 1; i++) {
-				if (bubbles[i].getsamecolor() == 1) {
-					for (int j = 0; j < bubbles.size() - 1; j++)
-						bubbles[i].search(bubbles[j]);//위에서 1로 만든 애들을 상대로 다시 search 
-				}
-			}
-			for (int i = 0; i < bubbles.size(); i++) {
-				if (bubbles[i].getsamecolor() == 1) {
-					samecolorlength++;//samecolor=1인 애들의 갯수를 세고
-				}
-			}
-			if (samecolorlength >= 3) {
-				/*for (int j = 0; j < 12; j++) {
+
+			// collision handling
+			for (int i = 0; i < bubbles.size() - 1; ++i) {
+				if (bubbles.back().collisionDetection(bubbles[i])) {
+					bubbles.back().setVelocity(0, 0, 0);
+					// 위치 설정
+					bubbles.back().decidePosition();
+					// ** remove algorithm **
+					bubbles.back().setSamecolor(1);
+					search(bubbles.back());
+					//samecolor=1인 버블의 개수를 확인
 					for (int i = 0; i < bubbles.size(); i++) {
-						if (j == 0 && bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
-								bubbles[i].setcheck(1);
-								for (int k = 0; k < bubbles.size(); k++) {
-									bubbles[i].checksearch(bubbles[k]);
-								}
+						if (bubbles[i].getSamecolor() == 1) {
+							samecolorlength++;
 						}
-						else if (bubbles[i].getCenter()[1] == line[j] && bubbles[i].getsamecolor() == 0) {
-							for (int k = 0; k < bubbles.size(); k++) {
-								bubbles[i].checksearch(bubbles[k]);
+					}
+					// 같은 색깔이 3개 이상 붙었을 때
+					if (samecolorlength >= 3) {
+						drop = 1;
+						// 벡터에서 삭제
+						for (int i = 0; i < bubbles.size();) {
+							if (bubbles[i].getSamecolor() == 1) {
+								bubbles.erase(bubbles.begin() + i);
+								score += 10;
+							}
+							else
+								i++;
+						}
+						// ** drop algorithm **
+						// 맨 윗열 버블들을 기준으로 탐색
+						for (int i = 0; i < bubbles.size(); i++) {
+							if (bubbles[i].getCenter()[1] == line[0]) {
+								checkSearch(bubbles[i]);
 							}
 						}
-							
+						// check=0인 버블의 개수를 셈
+						for (int i = 0; i < bubbles.size(); i++) {
+							if (bubbles[i].getCheck() == 0) {
+								drop_length += 1;
+								bubbles[i].setVelocity(0, drop_velocity, 0); // 드랍 속도 = 쏘는 속도의 절반
+							}
+						}
 					}
+					// 버블이 아래 경계선에 닿았으면 게임오버 - upbound check할 때는 필요없음
+					if (bubbles.back().getCenter()[1] == line[11]) {
+						game_over = 1;
+					}
+					// remove에 관련된 변수는 전부 재설정. drop에 관련된 변수는 drop할 버블이 없을 때만 재설정
+					samecolorlength = 0;
+					for (int i = 0; i < bubbles.size(); i++) {
+						bubbles[i].setSamecolor(0);
+						if (drop_length == 0) {
+							bubbles[i].setCheck(0);
+						}
+					}
+					if (drop_length == 0) {
+						drop = 0;
+						timer = true;
+					}
+					// 새로운 공 발사 준비
+					bubbles.push_back(temp[0]);
+					temp.erase(temp.begin());
+					break;
 				}
-				*/
+			}
+
+			// upbound check
+			if (bubbles.back().getCenter()[1] <= line[0]) {
+				bubbles.back().setVelocity(0, 0, 0);
+				bubbles.back().decidePosition();
+				bubbles.back().setSamecolor(1);
+				bubbles.back().setCheck(0);
+				search(bubbles.back());
 				for (int i = 0; i < bubbles.size(); i++) {
-					printf("%d %d\n", bubbles[i].getsamecolor(), bubbles[i].getcheck());
-					if (/*bubbles[i].getcheck() == 0 ||*/ bubbles[i].getsamecolor() == 1) {
-						bubbles[i].setCenter(1, 1, 0);
+					if (bubbles[i].getSamecolor() == 1) {
+						samecolorlength++;
+					}
+				}
+				if (samecolorlength >= 3) {
+					drop = 1;
+					for (int i = 0; i < bubbles.size();) {
+						printf("%d \n", bubbles[i].getSamecolor());
+						if (bubbles[i].getSamecolor() == 1) {
+							bubbles.erase(bubbles.begin() + i);
+							score += 10;
+						}
+						else
+							i++;
+					}
+					for (int i = 0; i < bubbles.size(); i++) {
+						if (bubbles[i].getCenter()[1] == line[0]) {
+							checkSearch(bubbles[i]);
+						}
+					}
+					for (int i = 0; i < bubbles.size(); i++) {
+						if (bubbles[i].getCheck() == 0) {
+							drop_length += 1;
+							bubbles[i].setVelocity(0, drop_velocity, 0);
+						}
+					}
+				}
+				samecolorlength = 0;
+				for (int i = 0; i < bubbles.size(); i++) {
+					bubbles[i].setSamecolor(0);
+					if (drop_length == 0) {
+						bubbles[i].setCheck(0);
+					}
+				}
+				if (drop_length == 0) {
+					drop = 0;
+					timer = true;
+				}
+				bubbles.push_back(temp[0]);
+				temp.erase(temp.begin());
+			}//Prediction을 쏴야할때(대기중인 버블이 움직이지 않고, Prediction안에 버블이 있을때
+			if (Prediction.size()>=1) {
+				if (Prediction.back().getCenter()[1] <= line[0]) {
+						Prediction.back().setVelocity(0, 0, 0);
+						Prediction.back().decidePosition();
+				}
+				if (Prediction.back().getCenter()[0] + 1 >= RIGHTBOUND || Prediction.back().getCenter()[0] - 1 <= LEFTBOUND) {
+						Prediction.back().setVelocity(-Prediction.back().getVelocity()[0], Prediction.back().getVelocity()[1], 0);
+				}
+				for (int i = 0; i < bubbles.size() - 1; ++i) {
+					if (Prediction.back().collisionDetection(bubbles[i])) {
+							Prediction.back().setVelocity(0, 0, 0);
+							Prediction.back().decidePosition();
 					}
 				}
 			}
-			samecolorlength = 0;
-			for (int i = 0; i < bubbles.size(); i++) {
-				bubbles[i].setsamecolor(0);//3보다 작으면 전부 원래대로 samecolor=0으로 만듬
-				bubbles[i].setcheck(0);
-			}
-			bubbles.push_back(temp[0]);
-			temp.erase(temp.begin());
-
-			break;
+			
 		}
+
+		// 드랍이 진행 중일 때
+		else if (drop == 1 && drop_length > 0) {
+			// 드랍시키는 버블이 아래 경계선에 닿으면(경계선의 y좌표가 27.3이므로 버블 중심의 y값이 26.3보다 커진다면) 삭제 및 점수 증가
+			for (int i = 0; i < bubbles.size() - 1;) {
+				if (bubbles[i].getCheck() == 0 && bubbles[i].getCenter()[1] > 26.3) {
+					bubbles.erase(bubbles.begin() + i);
+					drop_length -= 1;
+					score += 30;
+				}
+				else {
+					i++;
+				}
+			}
+			for (int i = 0; i < bubbles.size() - 1; i++) {
+				if (bubbles[i].getCheck() == 0) {
+					bubbles[i].move();
+				}
+			}
+		}
+
+		// 드랍이 완료되었을 때 drop 관련 변수 모두 재설정
+		else {
+			for (int i = 0; i < bubbles.size() - 1; i++) {
+				bubbles[i].setCheck(0);
+			}
+			drop = 0;
+			timer = true;
+		}
+		fps_start = fps_end;
 	}
-
-
 	glutPostRedisplay();
 }
 
 void reset() {
 	angle = 0;
+	score = 0;
 	game_over = 0;
-	timer = 0;
-	t = 100;
-	int samecolorlength = 0;
+	timer = true;
+	timecount = 0;
+	seccount = 0;
+	samecolorlength = 0;
 
 	bubbles.clear();
 	temp.clear();
@@ -243,38 +324,43 @@ void reset() {
 
 	Bubbles nextBubble;
 	temp.push_back(nextBubble);
-
 }
 
 void keyboard(unsigned char key, int x, int y) {
 	// Spacebar - ball shooting
-	if (key == 32 && game_over==0) {
-		if (bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0) {
-			timer = 1;
+	if (key == 32 && game_over == 0) {
+		if (bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0 && drop == 0) {
 			bubbles.back().setVelocity(velocity * sin(getRadian(angle)), velocity * -cos(getRadian(angle)), 0);
+			timecount = 0;
+			seccount = 0;
+			timer = false;
+			prediction_sw = 0;
 		}
 	}
-	if (key == 114) {
+	// ESC key - exit
+	else if (key == 27)
+		exit(0);
+	// R key - restart the game
+	else if (key == 114) {
 		reset();
 	}
-
-	// ESC key
-	if (key == 27)
-		exit(0);
 }
 
 void shootingAngle(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		if (angle > -85)
+		if (angle > -80)
 			angle -= 5;
+			prediction_sw = 0;
 		break;
 	case GLUT_KEY_RIGHT:
-		if (angle < 85)
+		if (angle < 80)
 			angle += 5;
+			prediction_sw = 0;
 		break;
 	}
 }
+
 
 void renderScene() {
 	glClearColor(0, 0, 0, 0);
@@ -289,33 +375,45 @@ void renderScene() {
 
 	// display characters
 	glPushMatrix();
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1, 1.8,0);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10, 1.8,0);
-	std::string s = std::to_string(t);
-	char const* pchar = s.c_str();
-	draw_characters(GLUT_BITMAP_HELVETICA_18, pchar, 15, 1.8,0);
-	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 28.9,0);
-	if (game_over == 1) {
-		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 16, 0);
-		timer = 0;
-	}
+	glColor3f(1.0, 1.0, 1.0);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "SCORE", 1.0, 1.8, 0.0);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "TIME", 10.0, 1.8, 0.0);
+	draw_characters(GLUT_BITMAP_HELVETICA_18, "NEXT", 0.8, 28.9, 0.0);
+	glPopMatrix();
+
+	// time bar
+	glPushMatrix();
+	glColor3f(1.0, (1 - timecount / 6.0), 0.0);
+	glBegin(GL_QUADS);
+	glVertex3f(12, 3.55, 0.0);
+	glVertex3f(12, 3.95, 0.0);
+	glVertex3f(18.5 - timecount, 3.95, 0.0);
+	glVertex3f(18.5 - timecount, 3.55, 0.0);
+	glEnd();
 	glPopMatrix();
 
 	// boundary lines
 	glPushMatrix();
 	glBegin(GL_QUADS);
+	glColor3f(1.0, 1.0, 1.0);
 	glVertex2f(0, line[0] - 1);
 	glVertex2f(20, line[0] - 1);
-	glVertex2f(20, line[0] - 1.45);
-	glVertex2f(0, line[0] - 1.45);
+	glVertex2f(20, line[0] - 1.5);
+	glVertex2f(0, line[0] - 1.5);
 	glEnd();
-
 	glBegin(GL_QUADS);
 	glVertex2f(0, 27.8);
 	glVertex2f(20, 27.8);
 	glVertex2f(20, 27.3);
 	glVertex2f(0, 27.3);
 	glEnd();
+	glPopMatrix();
+
+	glPushMatrix();
+	glColor3f(1.0, 1.0, 0.0);
+	string sc = to_string(score) + " points";
+	const char* scorechar = sc.c_str();
+	draw_characters(GLUT_BITMAP_HELVETICA_18, scorechar, 4.4, 4.0, 0);
 	glPopMatrix();
 
 	glEnable(GL_DEPTH_TEST);
@@ -329,10 +427,34 @@ void renderScene() {
 	glPushMatrix();
 	glRotatef(angle, 0, 1, 0);
 	cyl2.draw();
+	glPushMatrix();
+	glTranslatef(0, 0, 2.1);
+	cyl1.setProperties(0.8, 0, 1, 20, 20);
+	cyl1.draw();
+	glPopMatrix();
 	glPopMatrix();
 	glPopMatrix();
 
+	createPopupMenus();
 	bubbles.back().move();
+	if (do_prediction == 1) {
+		if (prediction_sw == 0 && game_over == 0 && bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0)
+		{
+			if (Prediction.size() >= 1) {
+				Prediction.erase(Prediction.begin());
+			}
+			Bubbles PredictionBubble;
+			PredictionBubble.setMTLforprediction();
+			PredictionBubble.setCenter(10.0, 29.0, 0.0);
+			Prediction.push_back(PredictionBubble);
+			Prediction.back().setVelocity(velocity * sin(getRadian(angle)), velocity * -cos(getRadian(angle)), 0);
+			printf("MakeBubble\n");
+			prediction_sw = 1;
+		}
+	}
+	if (Prediction.size() >= 1) {
+		Prediction.back().move();
+	}
 	
 	for (vector<Bubbles>::size_type i = 0; i < bubbles.size(); i++) {
 		bubbles[i].draw();
@@ -340,13 +462,34 @@ void renderScene() {
 	for (vector<Bubbles>::size_type i = 0; i < temp.size(); i++) {
 		temp[i].draw();
 	}
-
+	if (Prediction.size() >= 1) {
+		Prediction[0].draw();
+	}
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
-	stopwatch(timer);
+
+	if (game_over == 1) {
+		glColor3f(1.0, 1.0, 1.0);
+		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 17, 30);
+		timer = false;
+	}
 
 	glutSwapBuffers();
+}
+
+void processMainMenu(int option)
+{//MakeAPrediction을 눌렀을때
+	if (option == 1) {
+		do_prediction = 1;
+	}
+}
+
+
+void createPopupMenus(){
+	GLint mainMenu = glutCreateMenu(processMainMenu);
+	glutAddMenuEntry("MakeAPrediction", 1);
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
 int main(int argc, char** argv) {

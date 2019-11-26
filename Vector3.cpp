@@ -45,13 +45,11 @@ Vector3 operator-(const Vector3& v) {
 	return v3;
 }
 
-bool operator!=(const Vector3& v1, const Vector3& v2){
-	if (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2]) {
+bool operator!=(const Vector3& v1, const Vector3& v2) {
+	if (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2])
 		return false;
-	}
-	else {
+	else
 		return true;
-	}
 }
 
 Vector3 operator*(const float s, const Vector3& vec3) {
