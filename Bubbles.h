@@ -12,6 +12,8 @@ public:
 	bool collisionDetection(const Bubbles& bub);
 	bool newCollisionDetection(const Bubbles& bub);
 	void collisionHandling(Bubbles& bub);
+	void MakeGrid();
+	void UpdateGrid();
 	void decidePosition();
 	int getTilex();
 	int getTiley();
@@ -31,6 +33,10 @@ private:
 	int color;
 	int samecolor;
 	int check;
+	float x_dot;
+	float y_dot;
+	float x;
+	float y;
 };
 
 

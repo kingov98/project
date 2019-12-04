@@ -11,8 +11,8 @@ int green[4] = { 0.0, 1.0, 0.0, 1 };
 int blue[4] = { 0.0, 0.0, 1.0, 1 };
 
 
-Bubbles::Bubbles() : samecolor(0), check(0) {
-	properties.setXYZ(1, 110, 110);
+Bubbles::Bubbles() : samecolor(0), check(0),x_dot(0),y_dot(0),x(0),y(0) {
+	properties.setXYZ(1, 20, 20);
 	setCenter(1.8, 30.5, 0);
 	setMTL();
 }
@@ -46,6 +46,7 @@ void Bubbles::setMTL() {
 
 void Bubbles::setMTLforprediction() {
 	mtl.setAmbient(1, 1, 1, 1);
+	
 }
 
 Vector3 Bubbles::getProperties() const {
@@ -97,24 +98,95 @@ int Bubbles::getTilex() {
 int Bubbles::getTiley() {
 	return this->tiley;
 }
-void Bubbles::decidePosition() {
-	float x = this->getCenter()[0];
-	float y = this->getCenter()[1];
+void Bubbles::MakeGrid() {
+	this-> x = this->getCenter()[0];
+	this-> y = this->getCenter()[1];
 
-	this-> tiley = (y - y_offset + tileheight / 2) / tileheight;
+	this->tiley = (y - y_offset + tileheight / 2) / tileheight;
+	if (this->tiley < 0) {
+		this->tiley = 0;
+	}
 	if (tiley % 2 != 0) {
 		x -= tilewidth / 2;
 	}
-	this-> tilex = x / tilewidth;
+	this->tilex = x / tilewidth;
 
-	float y_dot = tiley * tileheight + y_offset;
-	float x_dot = tilex * tilewidth + radius;
+	this-> y_dot = tiley * tileheight + y_offset;
+	this-> x_dot = tilex * tilewidth + radius;
 
 	if (tiley % 2 != 0) {
 		x_dot += tilewidth / 2;
 		if (tilex == 9)
 			x_dot -= tilewidth;
 	}
+	
+};
+void Bubbles::UpdateGrid() {
+	Vector3 v1;
+	v1.setXYZ(x, y, 0);
+	Vector3 v2;
+	v2.setXYZ(x_dot, y_dot, 0);
+	float c1 = dotProduct(v1-v2,v1-v2);
+	if (y_dot != 7.5) {
+		if (x >= x_dot) {//아래쪽 방향을 기준으로 (x_dot,y_dot)->충돌지점(x,y)를 바라보는 각도를 기준으로
+			if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x += radius;
+				y += tileheight;
+			}
+			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x += radius;
+			}
+			else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x += radius;
+				y -= tileheight;
+			}
+		}
+		else if (x < x_dot) {
+			if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x -= radius ;
+				y +=tileheight;
+			}
+			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x -= radius;
+			}
+			else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x -= radius;
+				y += tileheight;
+			}
+		}
+	}
+	else if (y_dot == 7.5) {
+		if (x >= x_dot) {//아래쪽 방향을 기준으로 (x_dot,y_dot)->충돌지점(x,y)를 바라보는 각도를 기준으로
+			if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x += radius;
+				y += tileheight;
+			}
+			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x += radius;
+			}
+			else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x += radius;
+				y = 15+tileheight-y;
+			}
+		}
+		else if (x < x_dot) {
+			if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x -= radius ;
+				y += tileheight;
+			}
+			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x -= radius;
+			}
+			else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x -= radius;
+				y = 15 + tileheight - y;
+			}
+		}
+	}
+	this->setCenter(x, y, 0);
+};
+void Bubbles::decidePosition() {
+
 	this->setCenter(x_dot, y_dot, 0);
 }
 void Bubbles::setSamecolor(int same) {
