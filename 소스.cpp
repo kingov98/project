@@ -23,13 +23,12 @@ using namespace std;
 // global variables
 vector<Bubbles> bubbles;
 vector<Bubbles> temp;
-vector<Bubbles> Prediction;
 Bubbles predictionBubble;
 Cylinder cyl1; Cylinder cyl2;
 Light* light;
 float s3 = sqrt(3);
 float line[12];
-float velocity = 0.02;
+float velocity = 0.5;
 int angle = 0;
 int score = 0;
 int game_over = 0;
@@ -38,17 +37,18 @@ float timecount = 0;
 int seccount = 0;
 clock_t fps_start = clock();
 clock_t fps_end;
-int fps = 120;
+int fps = 60;
 int samecolorlength = 0;
 int drop = 0;
 int drop_length = 0;
 float drop_velocity = 0.2;
-int do_prediction = 0;//MakeAPrediction 옵션
-int prediction_sw = 0;//predictionBubble을 쏠 스위치(predictionBubble이 쏴지면 1이 되고 이 버블을 없어지게 만들려면 0으로 바꿈), prediction버불이 없어져야 하는경우:bubbles.back이 쏴졌을때,각도를 바꿨을때,
-float dot_distance = 0.5;
+float dot_distance = 0.1;
+int dot_count =0;
 float dot_angle = angle;
 int grid_arr[10][12];
 int prediction = 0;
+float prediction_x = 0;
+float prediction_y = 0;
 
 void createPopupMenus();
 void processMainMenu(int value);
@@ -128,7 +128,7 @@ void idle() {
 			bubbles.back().setVelocity(velocity * sin(getRadian(angle)), velocity * -cos(getRadian(angle)), 0);
 			timecount = 0;
 			seccount = 0;
-			prediction_sw = 0;
+			timer = false;
 		}
 		if (timer)
 			timecount += 6.5/ 600;
@@ -145,6 +145,9 @@ void idle() {
 			if (bubbles.back().getCenter()[1] <= line[0]) {
 				bubbles.back().setCenter(bubbles.back().getCenter()[0] + (bubbles.back().getVelocity()[0] / bubbles.back().getVelocity()[1]) * (7.5 - bubbles.back().getCenter()[1]), 7.5, 0);
 				bubbles.back().setVelocity(0, 0, 0);
+				if (prediction > 0) {
+					bubbles.back().setCenter(prediction_x, prediction_y, 0);
+				}
 				bubbles.back().MakeGrid();
 				if (grid_arr[bubbles.back().getTilex()][bubbles.back().getTiley()] == 1) {
 					bubbles.back().UpdateGrid();
@@ -220,20 +223,24 @@ void idle() {
 			}
 			if (bubbles.back().getCenter()[0] - 1 <= LEFTBOUND) {
 				//양쪽 바운더리를 벗어날 경우 위치를 바운더리 내부로 다시 조정해줌
-				bubbles.back().setCenter(2-bubbles.back().getCenter()[0], bubbles.back().getCenter()[1] , 0);
+				bubbles.back().setCenter(2 *LEFTBOUND +2-bubbles.back().getCenter()[0] , bubbles.back().getCenter()[1], 0);
 				bubbles.back().setVelocity(-bubbles.back().getVelocity()[0], bubbles.back().getVelocity()[1], 0);
 			}
 
 			// collision handling
 			for (int i = 0; i < bubbles.size() - 1; ++i) {
-				if (bubbles.back().collisionDetection(bubbles[i])) {
+				if (bubbles.back().collisionDetection(bubbles[i],2*bubbles.back().getProperties()[0]) || bubbles.back().collisionDetection(predictionBubble, bubbles.back().getProperties()[0])) {
 					bubbles.back().setVelocity(0, 0, 0);
 					// 위치 설정
+					if (prediction > 0) {
+						bubbles.back().setCenter(prediction_x, prediction_y, 0);
+					}
 					bubbles.back().MakeGrid();
 					if (grid_arr[bubbles.back().getTilex()][bubbles.back().getTiley()] == 1) {
 						bubbles.back().UpdateGrid();
 						bubbles.back().MakeGrid();
 					}
+					
 					bubbles.back().decidePosition();
 					grid_arr[bubbles.back().getTilex()][bubbles.back().getTiley()] = 1;
 					// ** remove algorithm **
@@ -311,36 +318,7 @@ void idle() {
 					temp.erase(temp.begin());
 					break;
 				}
-			}
-
-			//Prediction을 쏴야할때(대기중인 버블이 움직이지 않고, Prediction안에 버블이 있을때
-			if (Prediction.size()>=1) {
-				if (Prediction.back().getCenter()[1] <= line[0]) {
-						Prediction.back().setVelocity(0, 0, 0);
-						Prediction.back().MakeGrid();
-						if (grid_arr[Prediction.back().getTilex()][Prediction.back().getTiley()] == 1) {
-							Prediction.back().UpdateGrid();
-							Prediction.back().MakeGrid();
-						}
-						Prediction.back().decidePosition();
-				}
-				if (Prediction.back().getCenter()[0] + 1 >= RIGHTBOUND || Prediction.back().getCenter()[0] - 1 <= LEFTBOUND) {
-						Prediction.back().setVelocity(-Prediction.back().getVelocity()[0], Prediction.back().getVelocity()[1], 0);
-				}
-				for (int i = 0; i < bubbles.size() - 1; ++i) {
-					if (Prediction.back().collisionDetection(bubbles[i])) {
-							Prediction.back().setVelocity(0, 0, 0);
-							Prediction.back().MakeGrid();
-							if (grid_arr[Prediction.back().getTilex()][Prediction.back().getTiley()] == 1) {
-								Prediction.back().UpdateGrid();
-								Prediction.back().MakeGrid();
-							}
-							Prediction.back().decidePosition();
-
-					}
-				}
-			}
-			
+			}		
 		}
 
 		// 드랍이 진행 중일 때
@@ -384,7 +362,7 @@ void reset() {
 	timecount = 0;
 	seccount = 0;
 	samecolorlength = 0;
-	do_prediction = 0;
+	prediction = 0;
 	for (int i = 0; i < 12; i++) {
 		for (int j = 0; j < 10; j++) {
 			grid_arr[j][i] = 0;
@@ -410,7 +388,6 @@ void keyboard(unsigned char key, int x, int y) {
 			timecount = 0;
 			seccount = 0;
 			timer = false;
-			prediction_sw = 0;
 		}
 	}
 	// ESC key - exit
@@ -420,30 +397,19 @@ void keyboard(unsigned char key, int x, int y) {
 	else if (key == 114) {
 		reset();
 	}
-	if (key == 'a' && game_over == 0){
-		if (prediction == 0)
-			prediction = 1;
-		else if (prediction == 1)
-			prediction = 2;
-		else if (prediction == 2)
-			prediction = 0;
-	}
-	
 }
 
 void shootingAngle(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		if (angle > -80)
+		if (angle > -80 && game_over==0)
 			angle -= 5;
 			dot_angle -= 5;
-			prediction_sw = 0;
 		break;
 	case GLUT_KEY_RIGHT:
-		if (angle < 80)
+		if (angle < 80 && game_over == 0)
 			angle += 5;
 			dot_angle += 5;
-			prediction_sw = 0;
 		break;
 	}
 }
@@ -455,7 +421,7 @@ void renderScene() {
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(LEFTBOUND, RIGHTBOUND, DOWNBOUND, UPBOUND, -100.0, 100.0);
+	glOrtho(LEFTBOUND, RIGHTBOUND, DOWNBOUND, UPBOUND, -5.0, 5.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -523,7 +489,8 @@ void renderScene() {
 	glPopMatrix();
 	
 	//throw_line
-	if(prediction>0 && drop==0){
+	if(drop ==0 && bubbles.back().getVelocity()[0] == 0 && bubbles.back().getVelocity()[1] == 0){
+		dot_count = 0;
 		glPushMatrix();
 		float x = 10.0;
 		float y = 29.0;
@@ -546,8 +513,18 @@ void renderScene() {
 			}
 			if (exitOuterLoop)
 				break;
-	
-			glVertex2f(x, y);
+			if (prediction > 0) {
+				if (dot_count == 0) {
+					glVertex2f(x, y);
+					dot_count++;
+				}
+				else {
+					dot_count++;
+					if (dot_count >= (1 / dot_distance)) {
+						dot_count = 0;
+					}
+				}
+			}
 			x += dot_distance * sin(getRadian(dot_angle));
 			y -= dot_distance * cos(getRadian(dot_angle));
 
@@ -563,49 +540,27 @@ void renderScene() {
 		}
 		dot_angle = angle;
 		glEnd();
-	
-		if(prediction==2){
+
+
+		
+		
+		prediction_x = x;
+		prediction_y = y;
+
+		if (prediction == 2) {
 			//predictionBubble의 위치설정
-			predictionBubble.setMTLforprediction();
+			predictionBubble.setMTLforprediction(bubbles.back().getColor());
 			predictionBubble.setCenter(v[0], v[1], v[2]);
 			predictionBubble.MakeGrid();
-			if (grid_arr[predictionBubble.getTilex()][predictionBubble.getTiley()] == 1) {
-				predictionBubble.UpdateGrid();
-				predictionBubble.MakeGrid();
-			}
 			predictionBubble.decidePosition();
 			predictionBubble.draw();
-			glPopMatrix();
 		}
+
+		glPopMatrix();
 	}
 
 	createPopupMenus();
 	bubbles.back().move();
-	//MakeAPredicion 옵션이 켜졌다면
-	if (do_prediction == 1) {
-		if (prediction_sw == 0 && game_over == 0)//PredictionBubble을 쏴야할때
-		{//기존의 PredictionBubble이 있다면 없애고
-			if (Prediction.size() >= 1) {
-				Prediction.erase(Prediction.begin());
-			}//drop이 끝나고 bubbles.back이 멈춰있다면 predictionbubble을 생성 후 발사
-			if (bubbles.back().getVelocity()[0]==0 && bubbles.back().getVelocity()[1]==0 && drop==0) {
-			Bubbles PredictionBubble;
-			PredictionBubble.setMTLforprediction();
-			PredictionBubble.setCenter(10.0, 29.0, 0.0);
-			Prediction.push_back(PredictionBubble);
-			Prediction.back().setVelocity(velocity * sin(getRadian(angle)), velocity * -cos(getRadian(angle)), 0);
-			prediction_sw = 1;
-			}
-		}
-	}//DeleteAPrediction 옵션울 켜면
-	if (do_prediction == 0) {
-		if (Prediction.size() >= 1) {
-			Prediction.erase(Prediction.begin());
-		}
-	}
-	if (Prediction.size() >= 1) {
-		Prediction.back().move();
-	}
 	
 	for (vector<Bubbles>::size_type i = 0; i < bubbles.size() - 1; i++) {
 		bubbles[i].draw();
@@ -615,14 +570,11 @@ void renderScene() {
 			bubbles.back().draw();
 		else
 			for (vector<Bubbles>::size_type i = 0; i < bubbles.size() - 1; i++)
-				if(bubbles.back().collisionDetection(bubbles[i])==0)
+				if(bubbles.back().collisionDetection(bubbles[i], 2 * bubbles.back().getProperties()[0])==0)
 					bubbles.back().draw();
 	}
 	for (vector<Bubbles>::size_type i = 0; i < temp.size(); i++) {
 		temp[i].draw();
-	}
-	if (Prediction.size() >= 1) {
-		Prediction[0].draw();
 	}
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
@@ -630,8 +582,8 @@ void renderScene() {
 
 	if (game_over == 1) {
 		glColor3f(1.0, 1.0, 1.0);
-		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 17, 30);
-		draw_characters(GLUT_BITMAP_HELVETICA_18, "Retry:press R", 7.60, 18, 30);
+		draw_characters(GLUT_BITMAP_HELVETICA_18, "Game Over", 7.75, 17, 3);
+		draw_characters(GLUT_BITMAP_HELVETICA_18, "Retry:press R", 7.60, 18, 3);
 		timer = false;
 	}
 
@@ -641,18 +593,22 @@ void renderScene() {
 void processMainMenu(int option)
 {//MakeAPrediction을 눌렀을때
 	if (option == 1) {
-		do_prediction = 1;
+		prediction = 1;
 	}
 	if (option == 2) {
-		do_prediction = 0;
+		prediction = 2;
+	}
+	if (option == 3) {
+		prediction = 0;
 	}
 }
 
 
 void createPopupMenus(){
 	GLint mainMenu = glutCreateMenu(processMainMenu);
-	glutAddMenuEntry("MakeAPrediction", 1);
-	glutAddMenuEntry("DeleteAPrediction", 2);
+	glutAddMenuEntry("MakeAThrowline", 1);
+	glutAddMenuEntry("MakeAPredictionBall", 2);
+	glutAddMenuEntry("DeleteThrowline&Ball", 3);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
 

@@ -9,7 +9,7 @@ public:
 	Bubbles();
 	Bubbles(const Bubbles& bub);
 	Vector3 getProperties() const;
-	bool collisionDetection(const Bubbles& bub);
+	bool collisionDetection(const Bubbles& bub,float r);
 	bool newCollisionDetection(const Bubbles& bub);
 	void collisionHandling(Bubbles& bub);
 	void MakeGrid();
@@ -24,8 +24,9 @@ public:
 	void setCheck(int star);
 	int getCheck();
 	void setMTL();
-	void setMTLforprediction();
+	void setMTLforprediction(int c);
 	void draw() const;
+	void predictiondraw() const;
 private:
 	Vector3 properties;
 	int tilex;

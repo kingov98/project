@@ -44,19 +44,31 @@ void Bubbles::setMTL() {
 	setColor();
 }
 
-void Bubbles::setMTLforprediction() {
-	mtl.setAmbient(1, 1, 1, 1);
-	
+void Bubbles::setMTLforprediction(int c) {
+	switch(c) {
+	case 1:
+		mtl.setAmbient(red[0]/5.0, red[1]/5.0, red[2]/5.0, 1);
+		break;
+	case 2:
+		mtl.setAmbient(yellow[0]/5.0, yellow[1]/ 5.0, yellow[2]/ 5.0, 1);
+		break;
+	case 3:
+		mtl.setAmbient(green[0]/ 5.0, green[1]/ 5.0, green[2]/ 5.0, 1);
+		break;
+	case 4:
+		mtl.setAmbient(blue[0]/ 5.0, blue[1]/ 5.0, blue[2]/ 5.0, 1);
+		break;
+	}
 }
 
 Vector3 Bubbles::getProperties() const {
 	return properties;
 }
 
-bool Bubbles::collisionDetection(const Bubbles& bub) {
+bool Bubbles::collisionDetection(const Bubbles& bub, float r) {
 	// collision detection
 	Vector3 c3 = this->getCenter() - bub.getCenter();
-	if (sqrt(dotProduct(c3, c3)) <= this->getProperties()[0] + bub.getProperties()[0])
+	if (sqrt(dotProduct(c3, c3)) <= r)
 		return true;
 	else
 		return false;
@@ -127,60 +139,39 @@ void Bubbles::UpdateGrid() {
 	Vector3 v2;
 	v2.setXYZ(x_dot, y_dot, 0);
 	float c1 = dotProduct(v1-v2,v1-v2);
-	if (y_dot != 7.5) {
-		if (x >= x_dot) {//아래쪽 방향을 기준으로 (x_dot,y_dot)->충돌지점(x,y)를 바라보는 각도를 기준으로
-			if ((y - y_dot) / sqrt(c1) >= 0.5) {
-				x += radius;
+	if (x >= x_dot) {//아래쪽 방향을 기준으로 (x_dot,y_dot)->충돌지점(x,y)를 바라보는 각도를 기준으로
+		if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x = 2 * x_dot + radius - x;
 				y += tileheight;
-			}
-			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
-				x += radius;
-			}
-			else if ((y - y_dot) / sqrt(c1) < -0.5) {
-				x += radius;
-				y -= tileheight;
-			}
 		}
-		else if (x < x_dot) {
-			if ((y - y_dot) / sqrt(c1) >= 0.5) {
-				x -= radius ;
-				y +=tileheight;
-			}
-			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
-				x -= radius;
-			}
-			else if ((y - y_dot) / sqrt(c1) < -0.5) {
-				x -= radius;
-				y += tileheight;
-			}
+		else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x += tilewidth;
+		}
+		else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x = 2 * x_dot + radius - x;
+				if (y_dot == 7.5) {
+					y = 15 + tileheight - y;
+				}else {
+					y -= tileheight;
+				}
 		}
 	}
-	else if (y_dot == 7.5) {
-		if (x >= x_dot) {//아래쪽 방향을 기준으로 (x_dot,y_dot)->충돌지점(x,y)를 바라보는 각도를 기준으로
-			if ((y - y_dot) / sqrt(c1) >= 0.5) {
-				x += radius;
+	else if (x < x_dot) {
+		if ((y - y_dot) / sqrt(c1) >= 0.5) {
+				x = 2 * x_dot - radius - x;
 				y += tileheight;
-			}
-			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
-				x += radius;
-			}
-			else if ((y - y_dot) / sqrt(c1) < -0.5) {
-				x += radius;
-				y = 15+tileheight-y;
-			}
 		}
-		else if (x < x_dot) {
-			if ((y - y_dot) / sqrt(c1) >= 0.5) {
-				x -= radius ;
-				y += tileheight;
-			}
-			else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
-				x -= radius;
-			}
-			else if ((y - y_dot) / sqrt(c1) < -0.5) {
-				x -= radius;
-				y = 15 + tileheight - y;
-			}
+		else if (-0.5 <= (y - y_dot) / sqrt(c1) < 0.5) {
+				x -= tilewidth;
+		}
+		else if ((y - y_dot) / sqrt(c1) < -0.5) {
+				x = 2 * x_dot - radius - x;
+				if (y_dot == 7.5) {
+					y = 15 + tileheight - y;
+				}
+				else {
+					y -= tileheight;
+				}
 		}
 	}
 	this->setCenter(x, y, 0);
@@ -210,6 +201,15 @@ void Bubbles::draw() const {
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mtl.getDiffuse());
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mtl.getSpecular());
 	glMaterialfv(GL_FRONT, GL_SHININESS, mtl.getShininess());
+
+	glTranslatef(center[0], center[1], center[2]);
+	glutSolidSphere(properties[0], properties[1], properties[2]);
+	glPopMatrix();
+}
+void Bubbles::predictiondraw() const {
+	glPushMatrix();
+	glShadeModel(GL_SMOOTH);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mtl.getAmbient());
 
 	glTranslatef(center[0], center[1], center[2]);
 	glutSolidSphere(properties[0], properties[1], properties[2]);
